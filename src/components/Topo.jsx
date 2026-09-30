@@ -3,7 +3,7 @@ import { useTema } from '../tema'
 export function Marca({ grande = false }) {
   return (
     <div className={grande ? 'marca grande' : 'marca'}>
-      <span className="logo">?</span>
+      <span className="logo"><img src="/logo.png" alt="" /></span>
       <div>
         <strong>Fila de Dúvidas</strong>
         <small>SENAI Lages</small>

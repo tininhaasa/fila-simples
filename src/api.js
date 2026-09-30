@@ -132,3 +132,19 @@ export const dashTurmas = () =>
   consulta(supabase.from('dash_turmas').select('*').order('turma'))
 export const dashAlunos = (turmaId) =>
   consulta(supabase.from('dash_alunos').select('*').eq('turma_id', turmaId).order('nome'))
+
+// ---------- gestão de alunos e turmas (professora) ----------
+export const adminListarAlunos = () => rpc('admin_listar_alunos')
+export const adminSalvarAluno = ({ id, nome, matricula, turmaId, papel }) =>
+  rpc('admin_salvar_aluno', {
+    p_id: id,
+    p_nome: nome,
+    p_matricula: matricula,
+    p_turma_id: turmaId ? Number(turmaId) : null,
+    p_papel: papel,
+  })
+export const adminRemoverAluno = (id) => rpc('admin_remover_aluno', { p_id: id })
+export const adminListarTurmas = () => rpc('admin_listar_turmas')
+export const adminSalvarTurma = ({ id = null, nome, apelido, ativa = true }) =>
+  rpc('admin_salvar_turma', { p_id: id, p_nome: nome, p_apelido: apelido, p_ativa: ativa })
+export const adminExcluirTurma = (id) => rpc('admin_excluir_turma', { p_id: id })

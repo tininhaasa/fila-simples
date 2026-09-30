@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { criarConta, entrar } from '../api'
-import { Erro } from '../components/ui'
+import { CampoSenha, Erro } from '../components/ui'
 import { BotaoTema, Marca } from '../components/Topo'
 
 export default function Login() {
@@ -52,8 +52,7 @@ export default function Login() {
         </label>
         <label>
           Senha
-          <input
-            type="password"
+          <CampoSenha
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
             required

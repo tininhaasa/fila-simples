@@ -17,7 +17,18 @@ Visual nas cores do SENAI (azul `#0D4DA1` e laranja `#F15422`), com
 - Em **Ajudar colegas**, responde à dúvida de outro aluno da turma.
 - Pode cancelar o chamado ou avisar que resolveu sozinho.
 
-**Professora** (conta com `papel = 'admin'`)
+**Papéis**
+- **Admin geral** (`papel = 'admin'`): vê e gerencia **todas** as turmas; define quem é professor(a)
+  e em quais turmas dá aula (Dashboard → lápis na pessoa).
+- **Professor(a)** (`papel = 'professor'`): vê **só as turmas em que está vinculado(a)** — fila,
+  chamados, alunos e números. Entra numa turma por **link de convite** de um professor da turma
+  ou quando o admin geral vincula. Pode criar turmas novas (fica vinculado automaticamente).
+- **Aluno**: vê só a fila da própria turma.
+
+**Convites**: Dashboard → Gerenciar turmas → **Convidar professor(a)** gera um link de uso único,
+válido por 7 dias. Quem abre o link entra (ou cria a conta) e aceita o convite.
+
+**Professor(a) / admin**
 - Abre e encerra a fila de cada turma.
 - **Atender** → **Resolvido ✓**.
 - **Aprovar respostas**: aprova a resposta do colega (conta como ajuda para ele), recusa (a dúvida volta para a fila, no mesmo lugar) ou atende ela mesma.
@@ -47,7 +58,8 @@ aguardando ──(colega responde)──► respondido ──(professora aprova)
 ## Rodar no computador
 
 1. No Supabase: **SQL Editor → New query**, cole `supabase/banco.sql` e clique em **Run**.
-   Depois faça o mesmo com `supabase/gestao-alunos.sql`.
+   Depois faça o mesmo, **nesta ordem**, com `supabase/gestao-alunos.sql` e `supabase/professores.sql`.
+   (Se um dia rodar o `banco.sql` de novo, rode o `professores.sql` depois dele.)
 2. Copie `.env.local.example` para `.env.local` e preencha a URL e a chave anon
    (Supabase → Project Settings → API Keys).
 3. No terminal, dentro da pasta:
@@ -66,7 +78,9 @@ aguardando ──(colega responde)──► respondido ──(professora aprova)
 | Arquivo | O que faz |
 |---|---|
 | `supabase/banco.sql` | Tabelas, regras de segurança, funções e views do dashboard |
-| `supabase/gestao-alunos.sql` | Funções da professora para editar alunos e turmas |
+| `supabase/gestao-alunos.sql` | Funções para editar alunos e turmas |
+| `supabase/professores.sql` | Papel de professor, vínculo professor↔turma, convites e quem vê o quê |
+| `src/convite.js` + `src/pages/AceitarConvite.jsx` | Link de convite de professor |
 | `src/components/ui.jsx` | Peças reutilizáveis: botões, janela (modal), campo de senha com olho |
 | `src/api.js` | Todas as chamadas ao Supabase |
 | `src/useFila.js` | Carrega a fila e atualiza em tempo real |

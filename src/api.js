@@ -148,3 +148,19 @@ export const adminListarTurmas = () => rpc('admin_listar_turmas')
 export const adminSalvarTurma = ({ id = null, nome, apelido, ativa = true }) =>
   rpc('admin_salvar_turma', { p_id: id, p_nome: nome, p_apelido: apelido, p_ativa: ativa })
 export const adminExcluirTurma = (id) => rpc('admin_excluir_turma', { p_id: id })
+
+// ---------- professores por turma e convites ----------
+export const adminDefinirTurmasProfessor = (id, turmaIds) =>
+  rpc('admin_definir_turmas_professor', { p_id: id, p_turmas: turmaIds.map(Number) })
+export const removerProfessorDaTurma = (turmaId, professorId) =>
+  rpc('remover_professor_da_turma', { p_turma: turmaId, p_professor: professorId })
+export const criarConvite = (turmaId) => rpc('criar_convite', { p_turma: turmaId })
+export async function verConvite(token) {
+  const lista = await rpc('ver_convite', { p_token: token })
+  return lista?.[0] || { valido: false, motivo: 'Convite não encontrado.' }
+}
+export const aceitarConvite = (token, nome = null, matricula = null) =>
+  rpc('aceitar_convite', { p_token: token, p_nome: nome, p_matricula: matricula })
+
+// Link que o professor manda para o colega
+export const linkDoConvite = (token) => `${window.location.origin}/?convite=${token}`

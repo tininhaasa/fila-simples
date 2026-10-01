@@ -422,3 +422,49 @@ input:focus, select:focus, textarea:focus { border-color: var(--azul-fg); box-sh
 .campo-icone svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-4); font-size: 13px; }
 .campo-icone input { padding-left: 34px; }
 .btn-tema.mudo { color: var(--text-4); border-style: dashed; }
+
+/* ---------- professores por turma e convites ---------- */
+.s-prof { background: var(--azulc-bg); color: var(--azulc-fg); border-color: var(--azulc-br); font-size: 10.5px; padding: 2px 8px; }
+.btn.pequeno { padding: 5px 10px; font-size: 12px; }
+.btn.fantasma.pequeno { align-self: center; }
+
+.turmas-check {
+  border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px 12px;
+  display: flex; flex-wrap: wrap; gap: 8px 18px;
+}
+.turmas-check legend {
+  font-size: 11px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; color: var(--text-3); padding: 0 4px;
+}
+.turmas-check small { flex-basis: 100%; }
+label.check {
+  flex-direction: row; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0;
+  font-size: 13.5px; font-weight: 500; color: var(--text); cursor: pointer;
+}
+label.check input { width: 16px; height: 16px; accent-color: var(--azul); }
+
+.professores-turma, .convite-link { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.professores-turma .btn { margin-left: auto; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border-radius: 6px;
+  background: var(--azulc-bg); border: 1px solid var(--azulc-br); color: var(--azulc-fg); font-size: 12px; font-weight: 600;
+}
+.chip-x {
+  border: 0; background: transparent; color: inherit; opacity: .6; width: 20px; height: 20px;
+  border-radius: 4px; display: grid; place-items: center; font-size: 11px;
+}
+.chip-x:hover { opacity: 1; background: var(--verm-bg); color: var(--verm-fg); }
+.convite-link {
+  background: var(--laranja-bg); border: 1px dashed var(--laranja); border-radius: 8px; padding: 10px;
+}
+.convite-link input { flex: 1; min-width: 220px; font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; }
+.convite-link small { flex-basis: 100%; }
+
+.aviso-caixa {
+  background: var(--ambar-bg); color: var(--text-2); border: 1px solid var(--ambar-br);
+  border-left: 3px solid var(--ambar-fg); border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.45;
+}
+.icone-grande {
+  width: 54px; height: 54px; margin: 0 auto; border-radius: 14px; display: grid; place-items: center;
+  background: var(--laranja-bg); color: var(--laranja-fg); font-size: 24px;
+}
+.login h2 + p, .login > p { line-height: 1.5; }

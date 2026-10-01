@@ -6,12 +6,19 @@ import CompletarPerfil from './pages/CompletarPerfil'
 import Aluno from './pages/Aluno'
 import Professora from './pages/Professora'
 import Dashboard from './pages/Dashboard'
+import AceitarConvite from './pages/AceitarConvite'
 import { BotaoSom, BotaoTema, Marca } from './components/Topo'
+import { capturarConviteDaUrl, conviteGuardado, esquecerConvite } from './convite'
+
+capturarConviteDaUrl()
+
+const ROTULO_PAPEL = { admin: 'Admin geral', professor: 'Professor(a)' }
 
 export default function App() {
   const [sessao, setSessao] = useState(undefined) // undefined = ainda carregando
   const [perfil, setPerfil] = useState(undefined)
   const [aba, setAba] = useState('fila')
+  const [convite, setConvite] = useState(conviteGuardado)
 
   // 1) Descobre se tem alguém logado e escuta login/logout
   useEffect(() => {
@@ -56,7 +63,23 @@ export default function App() {
     return <Centro><p className="muted">Carregando…</p></Centro>
   }
 
-  if (!sessao) return <Login />
+  if (!sessao) return <Login convite={convite} />
+
+  // Chegou por link de convite de professor
+  if (convite) {
+    return (
+      <AceitarConvite
+        token={convite}
+        perfil={perfil}
+        email={sessao.user.email}
+        onFim={async (aceitou) => {
+          esquecerConvite()
+          setConvite(null)
+          if (aceitou) setPerfil(await buscarPerfil(userId))
+        }}
+      />
+    )
+  }
 
   if (!perfil) {
     return (
@@ -68,7 +91,7 @@ export default function App() {
     )
   }
 
-  const professora = perfil.papel === 'admin'
+  const professora = perfil.papel === 'admin' || perfil.papel === 'professor'
 
   return (
     <div className="app">
@@ -89,7 +112,7 @@ export default function App() {
         <div className="usuario">
           <span className="nome">
             {perfil.nome_completo.split(' ')[0]}
-            <small>{professora ? 'Professora' : perfil.turma?.apelido}</small>
+            <small>{ROTULO_PAPEL[perfil.papel] || perfil.turma?.apelido}</small>
           </span>
           <BotaoSom />
           <BotaoTema />
@@ -99,8 +122,8 @@ export default function App() {
 
       <main className="conteudo">
         {!professora && <Aluno perfil={perfil} />}
-        {professora && aba === 'fila' && <Professora />}
-        {professora && aba === 'dash' && <Dashboard />}
+        {professora && aba === 'fila' && <Professora perfil={perfil} />}
+        {professora && aba === 'dash' && <Dashboard perfil={perfil} />}
       </main>
     </div>
   )

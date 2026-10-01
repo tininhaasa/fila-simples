@@ -6,7 +6,7 @@ import {
   cancelarChamado,
   encerrarSessao,
   finalizarChamado,
-  listarTurmas,
+  adminListarTurmas,
   recusarResposta,
 } from '../api'
 import { tempoDesde, useAgora, useFila } from '../useFila'
@@ -15,6 +15,15 @@ import { useAvisoSonoro } from '../som'
 
 export default function Professora() {
   const { sessoes, chamados, carregando, erro, recarregar } = useFila()
+  const [turmas, setTurmas] = useState(null)
+  const [erroTurmas, setErroTurmas] = useState('')
+
+  // Só as turmas em que sou professor(a) (admin geral: todas)
+  useEffect(() => {
+    adminListarTurmas()
+      .then((t) => setTurmas(t.filter((x) => x.ativa)))
+      .catch((e) => { setErroTurmas(e.message); setTurmas([]) })
+  }, [])
 
   // Som: chamado novo na fila, ou resposta de colega esperando aprovação
   useAvisoSonoro(chamados, (antes, c) => {
@@ -24,12 +33,25 @@ export default function Professora() {
   })
   const agora = useAgora()
 
-  if (carregando) return <p className="muted">Carregando…</p>
+  if (carregando || turmas === null) return <p className="muted">Carregando…</p>
+
+  if (turmas.length === 0 && sessoes.length === 0) {
+    return (
+      <div className="card vazio">
+        <h2>Você ainda não está em nenhuma turma</h2>
+        <p className="muted">
+          Peça a um professor da turma um <b>link de convite</b>, ou peça ao admin geral para vincular você.
+          Você também pode criar uma turma nova em <b>Dashboard → Gerenciar turmas</b>.
+        </p>
+        <Erro>{erroTurmas}</Erro>
+      </div>
+    )
+  }
 
   return (
     <div className="pilha">
-      <Erro>{erro}</Erro>
-      <AbrirFila sessoes={sessoes} onAberta={recarregar} />
+      <Erro>{erro || erroTurmas}</Erro>
+      <AbrirFila turmas={turmas} sessoes={sessoes} onAberta={recarregar} />
 
       {sessoes.length === 0 && (
         <div className="card vazio">
@@ -51,15 +73,10 @@ export default function Professora() {
   )
 }
 
-function AbrirFila({ sessoes, onAberta }) {
-  const [turmas, setTurmas] = useState([])
+function AbrirFila({ turmas, sessoes, onAberta }) {
   const [turmaId, setTurmaId] = useState('')
   const [titulo, setTitulo] = useState('')
   const [erro, setErro] = useState('')
-
-  useEffect(() => {
-    listarTurmas().then(setTurmas).catch((e) => setErro(e.message))
-  }, [])
 
   const abertas = new Set(sessoes.map((s) => s.turma_id))
   const disponiveis = turmas.filter((t) => !abertas.has(t.id))

@@ -6,11 +6,15 @@ import {
   adminRemoverAluno,
   adminSalvarAluno,
   adminSalvarTurma,
+  adminDefinirTurmasProfessor,
+  criarConvite,
+  linkDoConvite,
+  removerProfessorDaTurma,
   dashTurmas,
 } from '../api'
 import { formatarSegundos } from '../useFila'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPen, faPlus, faTrashCan, faTriangleExclamation, faUsersGear, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
+import { faCheck, faCopy, faLink, faPen, faPlus, faXmark, faTrashCan, faTriangleExclamation, faUsersGear, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 import { BotaoAcao, Erro, Modal } from '../components/ui'
 
 const PARTES = [
@@ -20,7 +24,8 @@ const PARTES = [
   { campo: 'cancelados', rotulo: 'Cancelados', cor: 'var(--g-cancelados)' },
 ]
 
-export default function Dashboard() {
+export default function Dashboard({ perfil }) {
+  const ehAdmin = perfil?.papel === 'admin'
   const [resumo, setResumo] = useState([])
   const [alunos, setAlunos] = useState([])
   const [turmas, setTurmas] = useState([])
@@ -106,19 +111,21 @@ export default function Dashboard() {
         setBusca={setBusca}
         semTurma={semTurma}
         onEditar={setEditando}
+        ehAdmin={ehAdmin}
       />
 
       {editando && (
         <ModalAluno
           aluno={editando}
           turmas={turmas}
+          ehAdmin={ehAdmin}
           onFechar={() => setEditando(null)}
           onSalvo={() => { setEditando(null); carregar() }}
         />
       )}
 
       {gerenciarTurmas && (
-        <ModalTurmas turmas={turmas} onFechar={() => setGerenciarTurmas(false)} onMudou={carregar} />
+        <ModalTurmas turmas={turmas} perfil={perfil} onFechar={() => setGerenciarTurmas(false)} onMudou={carregar} />
       )}
     </div>
   )
@@ -139,16 +146,18 @@ const COLUNAS = [
 
 function TabelaAlunos({
   alunos, turmas, filtroTurma, setFiltroTurma, filtroPapel, setFiltroPapel,
-  busca, setBusca, semTurma, onEditar,
+  busca, setBusca, semTurma, onEditar, ehAdmin,
 }) {
   const [ordem, setOrdem] = useState({ campo: 'nome_completo', desc: false })
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
     const lista = alunos.filter((a) => {
-      if (filtroPapel && a.papel !== filtroPapel) return false
-      if (filtroTurma === 'sem') { if (a.turma_id) return false }
-      else if (filtroTurma && String(a.turma_id) !== filtroTurma) return false
+      if (filtroPapel === 'aluno' && a.papel !== 'aluno') return false
+      if (filtroPapel === 'professor' && a.papel === 'aluno') return false
+      const turmasDaPessoa = a.papel === 'aluno' ? [a.turma_id] : (a.turmas_prof || []).map((t) => t.id)
+      if (filtroTurma === 'sem') { if (turmasDaPessoa.some(Boolean)) return false }
+      else if (filtroTurma && !turmasDaPessoa.map(String).includes(filtroTurma)) return false
       if (termo) {
         const alvo = `${a.nome_completo} ${a.matricula} ${a.email || ''}`.toLowerCase()
         if (!alvo.includes(termo)) return false
@@ -190,7 +199,7 @@ function TabelaAlunos({
           Mostrar
           <select value={filtroPapel} onChange={(e) => setFiltroPapel(e.target.value)}>
             <option value="aluno">Alunos</option>
-            <option value="admin">Professoras</option>
+            <option value="professor">Professores</option>
             <option value="">Todos</option>
           </select>
         </label>
@@ -241,20 +250,27 @@ function TabelaAlunos({
                 <td>
                   <div className="pessoa">
                     {a.nome_completo}
-                    {a.papel === 'admin' && <span className="status s-admin">Professora</span>}
+                    {a.papel === 'admin' && <span className="status s-admin">Admin geral</span>}
+                    {a.papel === 'professor' && <span className="status s-prof">Professor(a)</span>}
                     <small>{a.email || '—'}</small>
                   </div>
                 </td>
                 <td className="mono">{a.matricula}</td>
-                <td className="nowrap">{a.turma || <span className="status s-cancelado">Sem turma</span>}</td>
+                <td className="nowrap">
+                  {a.papel === 'aluno'
+                    ? (a.turma || <span className="status s-cancelado">Sem turma</span>)
+                    : (a.turmas_prof?.length
+                        ? a.turmas_prof.map((t) => t.apelido).join(', ')
+                        : <span className="muted">nenhuma turma</span>)}
+                </td>
                 <td className="num">{a.chamados}</td>
                 <td className="num">{a.ajudas}</td>
                 <td className="num">{a.sozinho}</td>
                 <td className="data">{formatarData(a.ultimo_acesso)}</td>
                 <td className="acao-col">
-                  <button className="btn-icone" onClick={() => onEditar(a)} title="Editar cadastro" aria-label={`Editar ${a.nome_completo}`}>
+                  {(ehAdmin || a.papel === 'aluno') && <button className="btn-icone" onClick={() => onEditar(a)} title="Editar cadastro" aria-label={`Editar ${a.nome_completo}`}>
                     <FontAwesomeIcon icon={faPen} />
-                  </button>
+                  </button>}
                 </td>
               </tr>
             ))}
@@ -269,11 +285,13 @@ function TabelaAlunos({
 // ---------------------------------------------------------------------
 // Editar um aluno
 // ---------------------------------------------------------------------
-function ModalAluno({ aluno, turmas, onFechar, onSalvo }) {
+function ModalAluno({ aluno, turmas, ehAdmin, onFechar, onSalvo }) {
   const [nome, setNome] = useState(aluno.nome_completo)
   const [matricula, setMatricula] = useState(aluno.matricula)
   const [turmaId, setTurmaId] = useState(aluno.turma_id ? String(aluno.turma_id) : '')
   const [papel, setPapel] = useState(aluno.papel)
+  const [turmasProf, setTurmasProf] = useState((aluno.turmas_prof || []).map((t) => t.id))
+  const ehProf = papel !== 'aluno'
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
 
@@ -282,7 +300,8 @@ function ModalAluno({ aluno, turmas, onFechar, onSalvo }) {
     setErro('')
     setSalvando(true)
     try {
-      await adminSalvarAluno({ id: aluno.id, nome, matricula, turmaId, papel })
+      await adminSalvarAluno({ id: aluno.id, nome, matricula, turmaId: ehProf ? null : turmaId, papel })
+      if (ehAdmin && ehProf) await adminDefinirTurmasProfessor(aluno.id, turmasProf)
       onSalvo()
     } catch (e) {
       setErro(e.message)
@@ -306,29 +325,50 @@ function ModalAluno({ aluno, turmas, onFechar, onSalvo }) {
             Matrícula
             <input value={matricula} onChange={(e) => setMatricula(e.target.value)} required maxLength={30} />
           </label>
-          <label>
+          {!ehProf && <label>
             Turma
             <select value={turmaId} onChange={(e) => setTurmaId(e.target.value)}>
-              <option value="">Sem turma</option>
+              {ehAdmin && <option value="">Sem turma</option>}
               {turmas.map((t) => (
                 <option key={t.id} value={t.id}>{t.apelido}{t.ativa ? '' : ' (inativa)'}</option>
               ))}
             </select>
-          </label>
+          </label>}
         </div>
-        <label>
-          Papel
-          <select value={papel} onChange={(e) => setPapel(e.target.value)}>
-            <option value="aluno">Aluno</option>
-            <option value="admin">Professora (acesso ao painel)</option>
-          </select>
-        </label>
 
-        <div className="numeros-aluno">
+        {ehAdmin && (
+          <label>
+            Papel
+            <select value={papel} onChange={(e) => setPapel(e.target.value)}>
+              <option value="aluno">Aluno</option>
+              <option value="professor">Professor(a) — vê só as turmas vinculadas</option>
+              <option value="admin">Admin geral — vê e gerencia tudo</option>
+            </select>
+          </label>
+        )}
+
+        {ehAdmin && ehProf && (
+          <fieldset className="turmas-check">
+            <legend>Turmas em que dá aula</legend>
+            {turmas.map((t) => (
+              <label key={t.id} className="check">
+                <input
+                  type="checkbox"
+                  checked={turmasProf.includes(t.id)}
+                  onChange={(e) => setTurmasProf((l) => e.target.checked ? [...l, t.id] : l.filter((x) => x !== t.id))}
+                />
+                {t.apelido}{t.ativa ? '' : ' (inativa)'}
+              </label>
+            ))}
+            {papel === 'admin' && <small className="muted">Admin geral vê todas as turmas de qualquer jeito.</small>}
+          </fieldset>
+        )}
+
+        {!ehProf && <div className="numeros-aluno">
           <span><b>{aluno.chamados}</b> chamados</span>
           <span><b>{aluno.ajudas}</b> ajudas aprovadas</span>
           <span><b>{aluno.sozinho}</b> resolveu sozinho</span>
-        </div>
+        </div>}
 
         <Erro>{erro}</Erro>
 
@@ -353,7 +393,7 @@ function ModalAluno({ aluno, turmas, onFechar, onSalvo }) {
 // ---------------------------------------------------------------------
 // Gerenciar turmas
 // ---------------------------------------------------------------------
-function ModalTurmas({ turmas, onFechar, onMudou }) {
+function ModalTurmas({ turmas, perfil, onFechar, onMudou }) {
   const [nome, setNome] = useState('')
   const [apelido, setApelido] = useState('')
   const [erro, setErro] = useState('')
@@ -387,14 +427,17 @@ function ModalTurmas({ turmas, onFechar, onMudou }) {
 
       <div className="lista-turmas">
         {turmas.map((t) => (
-          <LinhaTurma key={t.id} turma={t} onMudou={onMudou} />
+          <LinhaTurma key={t.id} turma={t} perfil={perfil} onMudou={onMudou} />
         ))}
       </div>
     </Modal>
   )
 }
 
-function LinhaTurma({ turma, onMudou }) {
+function LinhaTurma({ turma, perfil, onMudou }) {
+  const ehAdmin = perfil?.papel === 'admin'
+  const [link, setLink] = useState('')
+  const [copiado, setCopiado] = useState(false)
   const [nome, setNome] = useState(turma.nome)
   const [apelido, setApelido] = useState(turma.apelido)
   const [erro, setErro] = useState('')
@@ -430,6 +473,50 @@ function LinhaTurma({ turma, onMudou }) {
           <FontAwesomeIcon icon={faTrashCan} />
         </BotaoAcao>
       </div>
+      <div className="professores-turma">
+        <span className="rotulo">Professores</span>
+        {(turma.professores || []).length === 0 && <small className="muted">nenhum vinculado</small>}
+        {(turma.professores || []).map((p) => (
+          <span key={p.id} className="chip">
+            {p.nome}
+            {(ehAdmin || p.id === perfil?.id) && (
+              <BotaoAcao
+                className="chip-x"
+                confirmar={p.id === perfil?.id ? `Sair da turma ${turma.apelido}? Você deixa de ver a fila e os alunos dela.` : `Tirar ${p.nome} da turma ${turma.apelido}?`}
+                acao={async () => { await removerProfessorDaTurma(turma.id, p.id); onMudou() }}
+                onErro={setErro}
+              >
+                <FontAwesomeIcon icon={faXmark} />
+              </BotaoAcao>
+            )}
+          </span>
+        ))}
+        <BotaoAcao
+          className="btn pequeno"
+          acao={async () => { setLink(linkDoConvite(await criarConvite(turma.id))); setCopiado(false) }}
+          onErro={setErro}
+        >
+          <FontAwesomeIcon icon={faLink} /> Convidar professor(a)
+        </BotaoAcao>
+      </div>
+
+      {link && (
+        <div className="convite-link">
+          <input value={link} readOnly onFocus={(e) => e.target.select()} aria-label="Link de convite" />
+          <button
+            type="button"
+            className="btn"
+            onClick={async () => {
+              try { await navigator.clipboard.writeText(link) } catch { /* sem permissão: a pessoa copia na mão */ }
+              setCopiado(true)
+            }}
+          >
+            <FontAwesomeIcon icon={copiado ? faCheck : faCopy} /> {copiado ? 'Copiado' : 'Copiar'}
+          </button>
+          <small className="muted">Mande este link para o(a) colega. Vale por 7 dias e só pode ser usado uma vez.</small>
+        </div>
+      )}
+
       {erro && <Erro>{erro}</Erro>}
     </div>
   )

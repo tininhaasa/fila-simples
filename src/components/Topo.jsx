@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faMoon, faSun } from '@fortawesome/free-solid-svg-icons'
+import { faBell, faBellSlash, faMoon, faSun } from '@fortawesome/free-solid-svg-icons'
 import { useTema } from '../tema'
+import { useSom } from '../som'
 
 export function Marca({ grande = false }) {
   return (
@@ -26,6 +27,22 @@ export function BotaoTema() {
       aria-label={escuro ? 'Mudar para modo claro' : 'Mudar para modo escuro'}
     >
       <FontAwesomeIcon icon={escuro ? faSun : faMoon} />
+    </button>
+  )
+}
+
+// Sino para ligar/desligar os avisos sonoros
+export function BotaoSom() {
+  const [ligado, alternar] = useSom()
+  return (
+    <button
+      className={`btn-tema ${ligado ? '' : 'mudo'}`}
+      onClick={alternar}
+      title={ligado ? 'Som ligado — clique para silenciar' : 'Som desligado — clique para ligar'}
+      aria-label={ligado ? 'Desligar avisos sonoros' : 'Ligar avisos sonoros'}
+      aria-pressed={ligado}
+    >
+      <FontAwesomeIcon icon={ligado ? faBell : faBellSlash} />
     </button>
   )
 }

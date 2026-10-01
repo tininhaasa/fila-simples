@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   abrirChamado,
   buscarMeuChamado,
@@ -8,6 +8,7 @@ import {
 } from '../api'
 import { tempoDesde, useAgora, useFila } from '../useFila'
 import { BotaoAcao, Erro, Status } from '../components/ui'
+import { useAvisoSonoro } from '../som'
 
 const ABERTOS = ['aguardando', 'em_atendimento', 'respondido']
 
@@ -15,6 +16,15 @@ export default function Aluno({ perfil }) {
   const { sessoes, chamados, carregando, erro, recarregar, versao } = useFila()
   const agora = useAgora()
   const [meuChamado, setMeuChamado] = useState(null)
+
+  // Som: a professora me chamou, ou um colega respondeu a minha dúvida
+  const meuChamadoLista = useMemo(() => (meuChamado ? [meuChamado] : []), [meuChamado])
+  useAvisoSonoro(meuChamadoLista, (antes, c) => {
+    if (!antes || antes === c.status) return null
+    if (c.status === 'em_atendimento') return 'sua_vez'
+    if (c.status === 'respondido') return 'resposta'
+    return null
+  })
 
   const minhaSessao = sessoes.find((s) => s.turma_id === perfil.turma_id)
   const filaDaTurma = chamados.filter((c) => c.sessao_id === minhaSessao?.id)

@@ -11,9 +11,17 @@ import {
 } from '../api'
 import { tempoDesde, useAgora, useFila } from '../useFila'
 import { BotaoAcao, Erro } from '../components/ui'
+import { useAvisoSonoro } from '../som'
 
 export default function Professora() {
   const { sessoes, chamados, carregando, erro, recarregar } = useFila()
+
+  // Som: chamado novo na fila, ou resposta de colega esperando aprovação
+  useAvisoSonoro(chamados, (antes, c) => {
+    if (antes === undefined && c.status === 'aguardando') return 'novo'
+    if (c.status === 'respondido' && antes !== 'respondido') return 'resposta'
+    return null
+  })
   const agora = useAgora()
 
   if (carregando) return <p className="muted">Carregando…</p>

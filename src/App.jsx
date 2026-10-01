@@ -6,7 +6,7 @@ import CompletarPerfil from './pages/CompletarPerfil'
 import Aluno from './pages/Aluno'
 import Professora from './pages/Professora'
 import Dashboard from './pages/Dashboard'
-import { BotaoTema, Marca } from './components/Topo'
+import { BotaoSom, BotaoTema, Marca } from './components/Topo'
 
 export default function App() {
   const [sessao, setSessao] = useState(undefined) // undefined = ainda carregando
@@ -91,6 +91,7 @@ export default function App() {
             {perfil.nome_completo.split(' ')[0]}
             <small>{professora ? 'Professora' : perfil.turma?.apelido}</small>
           </span>
+          <BotaoSom />
           <BotaoTema />
           <button className="btn fantasma" onClick={sair}>Sair</button>
         </div>

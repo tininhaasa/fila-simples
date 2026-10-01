@@ -27,6 +27,12 @@ Visual nas cores do SENAI (azul `#0D4DA1` e laranja `#F15422`), com
     **Remover conta** apaga o login e os chamados da pessoa.
   - **Gerenciar turmas**: criar, renomear, desativar/reativar e excluir turmas vazias.
 
+**Avisos sonoros** (sino no topo liga/desliga; a escolha fica salva no navegador)
+- Professora: som quando entra **chamado novo** e outro quando um colega manda **resposta para aprovar**.
+- Aluno: som quando **a professora chama** e quando **um colega responde** a dúvida.
+- Os sons são gerados pelo navegador (Web Audio API), sem arquivos de áudio.
+  O navegador só libera som depois do primeiro clique na página.
+
 ## Caminho de um chamado
 
 ```
@@ -65,6 +71,7 @@ aguardando ──(colega responde)──► respondido ──(professora aprova)
 | `src/api.js` | Todas as chamadas ao Supabase |
 | `src/useFila.js` | Carrega a fila e atualiza em tempo real |
 | `src/tema.js` | Troca entre modo claro e escuro |
+| `src/som.js` | Avisos sonoros e o botão de ligar/desligar |
 | `src/index.css` | Cores do SENAI e os dois temas (variáveis no topo do arquivo) |
 | `src/App.jsx` | Login → cadastro → tela do aluno ou da professora |
 | `src/pages/Aluno.jsx` | Minha dúvida + Ajudar colegas |

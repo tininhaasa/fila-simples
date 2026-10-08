@@ -33,12 +33,17 @@ export function BotaoTema() {
 
 // Sino para ligar/desligar os avisos sonoros
 export function BotaoSom() {
-  const [ligado, alternar] = useSom()
+  const [ligado, alternar, liberado] = useSom()
+  // Ligado, mas o navegador ainda não liberou o áudio (falta um clique na página)
+  const bloqueado = ligado && !liberado
   return (
     <button
-      className={`btn-tema ${ligado ? '' : 'mudo'}`}
-      onClick={alternar}
-      title={ligado ? 'Som ligado — clique para silenciar' : 'Som desligado — clique para ligar'}
+      className={`btn-tema ${ligado ? '' : 'mudo'} ${bloqueado ? 'bloqueado' : ''}`}
+      onClick={bloqueado ? undefined : alternar}
+      title={
+        bloqueado ? 'Clique em qualquer lugar da página para ativar os avisos sonoros'
+          : ligado ? 'Som ligado — clique para silenciar' : 'Som desligado — clique para ligar'
+      }
       aria-label={ligado ? 'Desligar avisos sonoros' : 'Ligar avisos sonoros'}
       aria-pressed={ligado}
     >

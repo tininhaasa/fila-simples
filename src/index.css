@@ -422,6 +422,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--azul-fg); box-sh
 .campo-icone svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-4); font-size: 13px; }
 .campo-icone input { padding-left: 34px; }
 .btn-tema.mudo { color: var(--text-4); border-style: dashed; }
+/* som ligado, mas o navegador ainda espera um clique para liberar o áudio */
+.btn-tema.bloqueado { color: var(--laranja-fg); border-color: var(--laranja); animation: sino-pulsa 1.4s ease-in-out infinite; }
+@keyframes sino-pulsa { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .btn-tema.bloqueado { animation: none; } }
 
 /* ---------- professores por turma e convites ---------- */
 .s-prof { background: var(--azulc-bg); color: var(--azulc-fg); border-color: var(--azulc-br); font-size: 10.5px; padding: 2px 8px; }

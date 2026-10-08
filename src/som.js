@@ -2,37 +2,58 @@ import { useEffect, useRef, useState } from 'react'
 
 // Avisos sonoros gerados pelo próprio navegador (Web Audio API),
 // sem arquivo de áudio. O navegador só libera som depois que a pessoa
-// interage com a página (um clique), por isso "destravamos" no 1º clique.
+// interage com a página (um clique), por isso "destravamos" nos cliques.
 
 const CHAVE = 'fila-som'
+const VOLUME = 0.9 // volume geral (0 a 1); o compressor segura os picos
 let ctx = null
+let saida = null // compressor -> ganho geral -> alto-falante
+const ouvintes = new Set() // avisa os componentes quando o áudio é liberado/bloqueado
 
 function contexto() {
   if (!ctx) {
     const AC = window.AudioContext || window.webkitAudioContext
     if (!AC) return null
     ctx = new AC()
+
+    // Compressor deixa o som mais "cheio" e alto sem estourar
+    const comp = ctx.createDynamicsCompressor()
+    comp.threshold.value = -24
+    comp.knee.value = 12
+    comp.ratio.value = 6
+    comp.attack.value = 0.003
+    comp.release.value = 0.15
+    const geral = ctx.createGain()
+    geral.gain.value = VOLUME
+    comp.connect(geral).connect(ctx.destination)
+    saida = comp
+
+    ctx.onstatechange = () => ouvintes.forEach((f) => f())
   }
-  if (ctx.state === 'suspended') ctx.resume()
+  if (ctx.state !== 'running') ctx.resume().catch(() => {})
   return ctx
 }
 
-// Destrava o áudio no primeiro clique/toque em qualquer lugar
+export function audioLiberado() {
+  return !!ctx && ctx.state === 'running'
+}
+
+// Destrava (e re-destrava, se o navegador suspender) a cada clique/toque.
+// Os listeners ficam sempre ativos: se já estiver rodando, não faz nada.
 if (typeof window !== 'undefined') {
   const destravar = () => {
-    contexto()
-    window.removeEventListener('pointerdown', destravar)
-    window.removeEventListener('keydown', destravar)
+    if (!audioLiberado()) contexto()
   }
   window.addEventListener('pointerdown', destravar)
   window.addEventListener('keydown', destravar)
+  window.addEventListener('touchend', destravar) // iOS
 }
 
 // Cada aviso é uma sequência de notas: [frequência em Hz, duração em s]
 const SONS = {
-  novo: [[660, 0.12], [880, 0.18]],                    // chamado novo na fila (sobe)
-  resposta: [[784, 0.1], [988, 0.1], [1175, 0.2]],      // resposta de colega pra aprovar
-  sua_vez: [[523, 0.15], [659, 0.15], [784, 0.15], [1047, 0.3]], // aluno chamado pela professora
+  novo: [[660, 0.16], [880, 0.24]],                    // chamado novo na fila (sobe)
+  resposta: [[784, 0.13], [988, 0.13], [1175, 0.26]],   // resposta de colega pra aprovar
+  sua_vez: [[523, 0.18], [659, 0.18], [784, 0.18], [1047, 0.4]], // aluno chamado pela professora
 }
 
 export function somLigado() {
@@ -43,31 +64,56 @@ export function somLigado() {
   }
 }
 
-export function tocar(tipo) {
-  if (!somLigado()) return
-  const ac = contexto()
-  const notas = SONS[tipo]
-  if (!ac || !notas || ac.state !== 'running') return
-
-  let t = ac.currentTime + 0.02
+function agendar(ac, notas) {
+  let t = ac.currentTime + 0.03
   for (const [freq, dur] of notas) {
-    const osc = ac.createOscillator()
+    // Duas ondas por nota: a fundamental (triângulo, mais "presente" que seno
+    // em alto-falante pequeno) + uma oitava acima, mais baixa, para dar brilho
     const vol = ac.createGain()
-    osc.type = 'sine'
-    osc.frequency.value = freq
+    vol.connect(saida)
+    for (const [tipo, mult, nivel] of [['triangle', 1, 1], ['sine', 2, 0.35]]) {
+      const osc = ac.createOscillator()
+      const g = ac.createGain()
+      osc.type = tipo
+      osc.frequency.value = freq * mult
+      g.gain.value = nivel
+      osc.connect(g).connect(vol)
+      osc.start(t)
+      osc.stop(t + dur + 0.05)
+    }
+    // Ataque rápido, segura o volume e só então desce (antes caía na hora)
     vol.gain.setValueAtTime(0.0001, t)
-    vol.gain.exponentialRampToValueAtTime(0.25, t + 0.015)
+    vol.gain.exponentialRampToValueAtTime(0.8, t + 0.01)
+    vol.gain.setValueAtTime(0.8, t + dur * 0.6)
     vol.gain.exponentialRampToValueAtTime(0.0001, t + dur)
-    osc.connect(vol).connect(ac.destination)
-    osc.start(t)
-    osc.stop(t + dur + 0.02)
     t += dur * 0.9
   }
 }
 
-// Liga/desliga, guardando no navegador
+export function tocar(tipo) {
+  if (!somLigado()) return
+  const ac = contexto()
+  const notas = SONS[tipo]
+  if (!ac || !notas) return
+
+  if (ac.state === 'running') agendar(ac, notas)
+  // Suspenso: espera o resume terminar em vez de perder o aviso
+  // (se o navegador ainda não liberou, o resume fica pendente até o próximo clique)
+  else ac.resume().then(() => agendar(ac, notas)).catch(() => {})
+}
+
+// Liga/desliga, guardando no navegador.
+// Também diz se o navegador ainda está bloqueando o áudio (falta um clique).
 export function useSom() {
   const [ligado, setLigado] = useState(somLigado)
+  const [liberado, setLiberado] = useState(audioLiberado)
+
+  useEffect(() => {
+    const atualizar = () => setLiberado(audioLiberado())
+    ouvintes.add(atualizar)
+    atualizar()
+    return () => ouvintes.delete(atualizar)
+  }, [])
 
   function alternar() {
     const novo = !ligado
@@ -83,7 +129,7 @@ export function useSom() {
     }
   }
 
-  return [ligado, alternar]
+  return [ligado, alternar, liberado]
 }
 
 // Compara a lista de chamados com a anterior e toca quando algo muda.
